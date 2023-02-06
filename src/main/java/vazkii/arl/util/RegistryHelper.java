@@ -1,33 +1,17 @@
 package vazkii.arl.util;
 
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Queue;
-import java.util.function.Supplier;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.mojang.datafixers.util.Pair;
-
-import net.minecraft.world.level.block.Block;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.color.item.ItemColor;
-import net.minecraft.client.color.item.ItemColors;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.GameData;
 import net.minecraftforge.registries.IForgeRegistry;
@@ -37,6 +21,10 @@ import vazkii.arl.interf.IBlockColorProvider;
 import vazkii.arl.interf.IBlockItemProvider;
 import vazkii.arl.interf.IItemColorProvider;
 import vazkii.arl.interf.IItemPropertiesFiller;
+
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 public final class RegistryHelper {
 
@@ -114,36 +102,14 @@ public final class RegistryHelper {
 		getCurrentModData().groups.put(block.getRegistryName(), group);
 	}
 
-	public static void loadComplete(FMLLoadCompleteEvent event) {
-		DistExecutor.runWhenOn(Dist.CLIENT, () -> () -> loadCompleteClient(event));
-
-		itemColors.clear();
+	public static void submitBlockColors(BiConsumer<BlockColor, Block> consumer) {
+		blockColors.forEach(p -> consumer.accept(p.getSecond().getBlockColor(), p.getFirst()));
 		blockColors.clear();
 	}
 
-	@OnlyIn(Dist.CLIENT)
-	private static boolean loadCompleteClient(FMLLoadCompleteEvent event) {
-		Minecraft mc = Minecraft.getInstance();
-		BlockColors bcolors = mc.getBlockColors();
-		ItemColors icolors = mc.getItemColors();
-
-		while(!blockColors.isEmpty()) {
-			Pair<Block, IBlockColorProvider> pair = blockColors.poll();
-			BlockColor color = pair.getSecond().getBlockColor();
-
-			if (color != null)
-				bcolors.register(color, pair.getFirst());
-		}
-
-		while(!itemColors.isEmpty()) {
-			Pair<Item, IItemColorProvider> pair = itemColors.poll();
-			ItemColor color = pair.getSecond().getItemColor();
-
-			if (color != null)
-				icolors.register(color, pair.getFirst());
-		}
-
-		return true;
+	public static void submitItemColors(BiConsumer<ItemColor, Item> consumer) {
+		itemColors.forEach(p -> consumer.accept(p.getSecond().getItemColor(), p.getFirst()));
+		itemColors.clear();
 	}
 
 	private static class ModData {
